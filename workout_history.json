@@ -1,0 +1,86 @@
+[
+  {
+    "date": "2025-02-11",
+    "activity": "Ski Tour",
+    "distance": 5.4,
+    "elevation": 369.0
+  },
+  {
+    "date": "2025-02-09",
+    "activity": "Hike",
+    "distance": 4.08,
+    "elevation": 349.0
+  },
+  {
+    "date": "2025-02-08",
+    "activity": "Ski Tour",
+    "distance": 6.29,
+    "elevation": 512.0
+  },
+  {
+    "date": "2025-02-07",
+    "activity": "Ski Tour",
+    "distance": 4.82,
+    "elevation": 338.0
+  },
+  {
+    "date": "2025-02-04",
+    "activity": "Ski Tour",
+    "distance": 4.28,
+    "elevation": 249.0
+  },
+  {
+    "date": "2025-02-04",
+    "activity": "Hike",
+    "distance": 4.0,
+    "elevation": 100.0
+  },
+  {
+    "date": "2025-02-03",
+    "activity": "Hike",
+    "distance": 4.6,
+    "elevation": 187.0
+  },
+  {
+    "date": "2025-02-03",
+    "activity": "Ski Tour",
+    "distance": 6.57,
+    "elevation": 363.0
+  },
+  {
+    "date": "2025-02-12",
+    "activity": "Hike",
+    "distance": 3.0,
+    "elevation": 219.0
+  },
+  {
+    "date": "2025-02-12",
+    "activity": "Hike",
+    "distance": 3.0,
+    "elevation": 152.0
+  },
+  {
+    "date": "2025-02-13",
+    "activity": "Hike",
+    "distance": 2.45,
+    "elevation": 162.0
+  },
+  {
+    "date": "2025-02-14",
+    "activity": "Hike",
+    "distance": 5.3,
+    "elevation": 193.0
+  },
+  {
+    "date": "2025-02-19",
+    "activity": "Hike",
+    "distance": 7.6,
+    "elevation": 280.0
+  },
+  {
+    "date": "2025-02-20",
+    "activity": "Hike",
+    "distance": 6.3,
+    "elevation": 380.0
+  }
+]
