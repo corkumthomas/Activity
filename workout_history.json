@@ -82,5 +82,53 @@
     "activity": "Hike",
     "distance": 6.3,
     "elevation": 380.0
+  },
+  {
+    "date": "2025-02-21",
+    "activity": "Hike",
+    "distance": 5.3,
+    "elevation": 300.0
+  },
+  {
+    "date": "2025-02-22",
+    "activity": "Hike",
+    "distance": 3.2,
+    "elevation": 150.0
+  },
+  {
+    "date": "2025-02-23",
+    "activity": "Hike",
+    "distance": 3.0,
+    "elevation": 150.0
+  },
+  {
+    "date": "2025-02-24",
+    "activity": "Hike",
+    "distance": 5.6,
+    "elevation": 330.0
+  },
+  {
+    "date": "2025-02-25",
+    "activity": "Hike",
+    "distance": 3.0,
+    "elevation": 200.0
+  },
+  {
+    "date": "2025-02-25",
+    "activity": "Bike",
+    "distance": 5.0,
+    "elevation": 190.0
+  },
+  {
+    "date": "2025-02-26",
+    "activity": "Hike",
+    "distance": 4.0,
+    "elevation": 250.0
+  },
+  {
+    "date": "2025-02-26",
+    "activity": "Bike",
+    "distance": 6.1,
+    "elevation": 300.0
   }
 ]

@@ -16,7 +16,7 @@ class WorkoutTracker:
     def __init__(self, root):
         self.root = root
         self.root.title("Workout Tracker")
-        self.root.geometry("800x600")
+        self.root.geometry("900x900")
         
         # Challenge parameters
         self.challenge_start = datetime(2025, 2, 1).date()
@@ -313,6 +313,159 @@ class WorkoutTracker:
             'current_daily_avg': current_daily_avg,
             'days_remaining': days_remaining
         }
+    
+# Add this method to calculate daily data
+    def calculate_daily_data(self, days=14):
+        """Calculate daily elevation data for the specified number of recent days"""
+        if not self.workouts:
+            return {'dates': [], 'totals': []}
+        
+        # Convert workout data to DataFrame
+        df = pd.DataFrame(self.workouts)
+        df['date'] = pd.to_datetime(df['date'])
+        
+        # Set the date range for the last N days
+        end_date = max(df['date'])
+        start_date = end_date - timedelta(days=days-1)  # Show last N days
+        
+        # Create a date range for all days in the period
+        date_range = pd.date_range(start=start_date, end=end_date)
+        
+        # Create daily bins for the elevation data
+        df = df[df['date'] >= start_date]
+        daily_totals = df.resample('D', on='date')['elevation'].sum().reindex(date_range).fillna(0)
+        
+        # Format date labels
+        date_labels = [d.strftime('%b %d') for d in daily_totals.index]
+        
+        return {
+            'dates': date_labels,
+            'totals': daily_totals.values
+        }
+
+        # Add this method to create the daily graphs
+        def create_daily_graphs(self, parent_frame):
+            """Create daily elevation graphs for the last 14 days"""
+            # Clear existing graphs
+            for widget in parent_frame.winfo_children():
+                widget.destroy()
+            
+            # Create a container for both graphs
+            graphs_container = ttk.Frame(parent_frame)
+            graphs_container.pack(fill='both', expand=True)
+            
+            # Create top frame for cumulative graph
+            cumulative_frame = ttk.LabelFrame(graphs_container, text="Cumulative Elevation (Last 14 Days)", padding=10)
+            cumulative_frame.pack(fill='both', expand=True, padx=10, pady=5)
+            
+            # Create bottom frame for daily graph
+            daily_frame = ttk.LabelFrame(graphs_container, text="Daily Elevation (Last 14 Days)", padding=10)
+            daily_frame.pack(fill='both', expand=True, padx=10, pady=5)
+            
+            # Get the daily data
+            data = self.calculate_daily_data(days=14)
+            
+            if not data['dates']:  # If no data, return empty graphs
+                for frame in [cumulative_frame, daily_frame]:
+                    fig = Figure(figsize=(8, 2.5), dpi=100)
+                    canvas = FigureCanvasTkAgg(fig, master=frame)
+                    canvas.draw()
+                    canvas.get_tk_widget().pack(fill='both', expand=True)
+                return
+            
+            # Create cumulative graph
+            fig_cumulative = Figure(figsize=(8, 2.5), dpi=100)
+            ax_cumulative = fig_cumulative.add_subplot(111)
+            
+            # Calculate cumulative values
+            cumulative = np.cumsum(data['totals'])
+            
+            # Plot actual cumulative data
+            ax_cumulative.plot(range(len(data['dates'])), cumulative, 
+                            marker='o', color='#4CAF50', linewidth=2, markersize=6, label='Actual')
+            
+            # Calculate and plot goal trend line
+            challenge_stats = self.calculate_challenge_stats()
+            remaining_days = challenge_stats['days_remaining']
+            remaining_elevation = challenge_stats['remaining_elevation']
+            
+            if remaining_days > 0:
+                daily_goal = remaining_elevation / remaining_days
+                # For the 14-day window, calculate what the goal trend should be
+                start_elevation = cumulative[0] if len(cumulative) > 0 else 0
+                goal_line = start_elevation + np.arange(1, len(data['dates']) + 1) * daily_goal
+                
+                # Plot goal trend line
+                ax_cumulative.plot(range(len(data['dates'])), goal_line, '--', 
+                                color='#FF9800', linewidth=2, label='Goal Trend')
+                
+                # Add label for final goal value
+                if len(goal_line) > 0:
+                    final_goal = goal_line[-1]
+                    ax_cumulative.text(len(data['dates']) - 1, final_goal + (max(cumulative) * 0.02),
+                                    f'Goal: {int(final_goal):,}m', ha='center', va='bottom', color='#FF9800')
+            
+            # Add value labels for actual data
+            for i, value in enumerate(cumulative):
+                if i % 2 == 0:  # Add labels to every other point to avoid overcrowding
+                    label_y = value + (max(cumulative) * 0.02) if len(cumulative) > 0 else value
+                    ax_cumulative.text(i, label_y, f'{int(value):,}m', ha='center', va='bottom', fontsize=8)
+            
+            # Customize cumulative graph
+            ax_cumulative.set_xticks(range(len(data['dates'])))
+            ax_cumulative.set_xticklabels(data['dates'], rotation=45, ha='right', fontsize=8)
+            ax_cumulative.set_ylabel('Elevation Gain (m)')
+            ax_cumulative.grid(True, linestyle='--', alpha=0.7)
+            ax_cumulative.legend()
+            
+            # Add some padding to the top of the graph for labels
+            ax_cumulative.margins(y=0.1)
+            
+            # Adjust layout
+            fig_cumulative.tight_layout()
+            
+            # Create canvas and add to frame
+            canvas_cumulative = FigureCanvasTkAgg(fig_cumulative, master=cumulative_frame)
+            canvas_cumulative.draw()
+            canvas_cumulative.get_tk_widget().pack(fill='both', expand=True)
+            
+            # Create daily graph
+            fig_daily = Figure(figsize=(8, 2.5), dpi=100)
+            ax_daily = fig_daily.add_subplot(111)
+            
+            # Create bar chart for daily data
+            bars = ax_daily.bar(range(len(data['dates'])), data['totals'], color='#4CAF50', alpha=0.8)
+            
+            # Add horizontal line for average daily needed
+            if remaining_days > 0:
+                avg_line = ax_daily.axhline(y=daily_goal, color='#FF9800', linestyle='--', linewidth=2, 
+                                            label=f'Goal: {daily_goal:.0f}m/day')
+                ax_daily.legend()
+            
+            # Add value labels
+            for i, bar in enumerate(bars):
+                height = bar.get_height()
+                if height > 0:  # Only add labels to bars with values
+                    ax_daily.text(bar.get_x() + bar.get_width()/2., height + (max(data['totals']) * 0.02),
+                                f'{int(height):,}m', ha='center', va='bottom', fontsize=8)
+            
+            # Customize daily graph
+            ax_daily.set_xticks(range(len(data['dates'])))
+            ax_daily.set_xticklabels(data['dates'], rotation=45, ha='right', fontsize=8)
+            ax_daily.set_ylabel('Elevation Gain (m)')
+            ax_daily.grid(True, linestyle='--', alpha=0.7)
+            
+            # Add some padding to the top of the graph for labels
+            ax_daily.margins(y=0.1)
+            
+            # Adjust layout
+            fig_daily.tight_layout()
+            
+            # Create canvas and add to frame
+            canvas_daily = FigureCanvasTkAgg(fig_daily, master=daily_frame)
+            canvas_daily.draw()
+            canvas_daily.get_tk_widget().pack(fill='both', expand=True)
+
     def create_weekly_graph(self, parent_frame):
         # Create figure and axis
         fig = Figure(figsize=(8, 3), dpi=100)
@@ -366,18 +519,20 @@ class WorkoutTracker:
         
         # Create graph type selector
         ttk.Label(controls_frame, text="Graph Type:", style="Header.TLabel").pack(side='left', padx=5)
-        self.graph_type = tk.StringVar(value="weekly")
+        self.graph_type = tk.StringVar(value="Daily Elevation")
         graph_combo = ttk.Combobox(controls_frame, 
-                                  textvariable=self.graph_type,
-                                  values=["Weekly Elevation", "Weekly Cumulative", "Monthly Elevation", "Monthly Cumulative"],
-                                  state="readonly",
-                                  width=20)
+                                textvariable=self.graph_type,
+                                values=["Daily Elevation", "Daily Cumulative", "Weekly Elevation", "Weekly Cumulative", "Monthly Elevation", "Monthly Cumulative"],
+                                state="readonly",
+                                width=20)
         graph_combo.pack(side='left', padx=5)
         graph_combo.bind('<<ComboboxSelected>>', lambda e: self.update_graph())
-    
+        
         # Create frame for graph
         self.graph_container = ttk.Frame(parent_frame)
         self.graph_container.pack(fill='both', expand=True)
+
+    # Modify the create_graph method to show total cumulative elevation for daily view
 
     def create_graph(self, parent_frame):
         # Clear existing graph
@@ -390,7 +545,10 @@ class WorkoutTracker:
         
         graph_type = self.graph_type.get()
         
-        if "Weekly" in graph_type:
+        if "Daily" in graph_type:
+            data = self.calculate_daily_data(days=14)  # Get data for the last 14 days
+            x_labels = data['dates']
+        elif "Weekly" in graph_type:
             data = self.calculate_weekly_data()
             x_labels = data['weeks']
         else:  # Monthly
@@ -404,68 +562,146 @@ class WorkoutTracker:
             return
         
         if "Cumulative" in graph_type:
-            # Plot actual cumulative data
-            cumulative = np.cumsum(data['totals'])
-            line = ax.plot(range(len(x_labels)), 
-                          cumulative,
-                          marker='o',
-                          color='#4CAF50',
-                          linewidth=2,
-                          markersize=6,
-                          label='Actual')
-            
-            # Calculate and plot goal trend line
-            if "Weekly" in graph_type:
-                total_weeks = (self.challenge_end - self.challenge_start).days / 7
-                weekly_goal = self.elevation_goal / total_weeks
-                goal_line = np.arange(1, len(x_labels) + 1) * weekly_goal
+            if "Daily" in graph_type:
+                # For daily cumulative, we want to show the total progress, not just within the window
+                challenge_stats = self.calculate_challenge_stats()
+                total_so_far = challenge_stats['challenge_elevation']
+                
+                # Calculate how much of that total came from the last 14 days
+                recent_elevation = sum(data['totals'])
+                
+                # Start value is total minus what was gained in this window
+                start_value = max(0, total_so_far - recent_elevation)
+                
+                # Create cumulative array starting from the overall progress
+                daily_cumulative = start_value + np.cumsum(data['totals'])
+                
+                # Plot actual cumulative data
+                line = ax.plot(range(len(x_labels)), 
+                              daily_cumulative,
+                              marker='o',
+                              color='#4CAF50',
+                              linewidth=2,
+                              markersize=6,
+                              label='Actual')
+                
+                # Calculate and plot goal trend line
+                remaining_days = challenge_stats['days_remaining']
+                remaining_elevation = challenge_stats['remaining_elevation']
+                
+                if remaining_days > 0:
+                    daily_goal = remaining_elevation / remaining_days
+                    current_progress = daily_cumulative[0] if len(daily_cumulative) > 0 else 0
+                    goal_line = current_progress + np.arange(1, len(x_labels) + 1) * daily_goal
+                    
+                    # Plot goal trend line
+                    ax.plot(range(len(x_labels)),
+                           goal_line,
+                           '--',
+                           color='#FF9800',
+                           linewidth=2,
+                           label='Goal Trend')
+                    
+                    # Add final goal value label
+                    if len(goal_line) > 0:
+                        final_goal = goal_line[-1]
+                        ax.text(len(x_labels) - 1, final_goal + (max(daily_cumulative) * 0.02),
+                               f'Goal: {int(final_goal):,}m',
+                               ha='center', va='bottom',
+                               color='#FF9800')
+                
+                # Add value labels for actual data
+                for i, value in enumerate(daily_cumulative):
+                    if i % 2 == 0:  # Add labels to every other point to avoid overcrowding
+                        label_y = value + (max(daily_cumulative) * 0.02)
+                        ax.text(i, label_y, f'{int(value):,}m',
+                               ha='center', va='bottom', fontsize=8)
             else:
-                total_months = (self.challenge_end - self.challenge_start).days / 30.44  # Average month length
-                monthly_goal = self.elevation_goal / total_months
-                goal_line = np.arange(1, len(x_labels) + 1) * monthly_goal
-            
-            # Plot goal trend line
-            ax.plot(range(len(x_labels)),
-                    goal_line,
-                    '--',
-                    color='#FF9800',
-                    linewidth=2,
-                    label='Goal Trend')
-            
-            # Add value labels for actual data
-            for i, value in enumerate(cumulative):
-                label_y = value + (max(cumulative) * 0.02)
-                ax.text(i, label_y, f'{int(value):,}m',
-                        ha='center', va='bottom')
-            
-            # Add label for final goal value only
-            if len(goal_line) > 0:
-                final_goal = goal_line[-1]
-                ax.text(len(x_labels) - 1, final_goal + (max(cumulative) * 0.02),
-                       f'Goal: {int(final_goal):,}m',
-                       ha='center', va='bottom',
-                       color='#FF9800')
+                # Regular cumulative for weekly/monthly
+                cumulative = np.cumsum(data['totals'])
+                line = ax.plot(range(len(x_labels)), 
+                              cumulative,
+                              marker='o',
+                              color='#4CAF50',
+                              linewidth=2,
+                              markersize=6,
+                              label='Actual')
+                
+                # Calculate and plot goal trend line
+                challenge_stats = self.calculate_challenge_stats()
+                remaining_elevation = challenge_stats['remaining_elevation']
+                
+                if "Weekly" in graph_type:
+                    total_weeks = (self.challenge_end - self.challenge_start).days / 7
+                    weekly_goal = self.elevation_goal / total_weeks
+                    goal_line = np.arange(1, len(x_labels) + 1) * weekly_goal
+                else:
+                    total_months = (self.challenge_end - self.challenge_start).days / 30.44  # Average month length
+                    monthly_goal = self.elevation_goal / total_months
+                    goal_line = np.arange(1, len(x_labels) + 1) * monthly_goal
+                
+                # Plot goal trend line
+                ax.plot(range(len(x_labels)),
+                       goal_line,
+                       '--',
+                       color='#FF9800',
+                       linewidth=2,
+                       label='Goal Trend')
+                
+                # Add value labels for actual data
+                for i, value in enumerate(cumulative):
+                    label_y = value + (max(cumulative) * 0.02)
+                    ax.text(i, label_y, f'{int(value):,}m',
+                           ha='center', va='bottom', fontsize=9)
+                
+                # Add label for final goal value only
+                if len(goal_line) > 0:
+                    final_goal = goal_line[-1]
+                    ax.text(len(x_labels) - 1, final_goal + (max(cumulative) * 0.02),
+                           f'Goal: {int(final_goal):,}m',
+                           ha='center', va='bottom',
+                           color='#FF9800')
             
             ax.legend()
             
         else:
-            # Plot regular elevation data
-            line = ax.plot(range(len(x_labels)), 
-                          data['totals'],
-                          marker='o',
-                          color='#4CAF50',
-                          linewidth=2,
-                          markersize=6)
-            
-            # Add value labels
-            for i, value in enumerate(data['totals']):
-                label_y = value + (max(data['totals']) * 0.02)
-                ax.text(i, label_y, f'{int(value):,}m',
-                        ha='center', va='bottom')
+            # For non-cumulative views
+            if "Daily" in graph_type:
+                # Use bar chart for daily elevation
+                bars = ax.bar(range(len(x_labels)), data['totals'], color='#4CAF50', alpha=0.8)
+                
+                # Add horizontal line for daily goal if applicable
+                challenge_stats = self.calculate_challenge_stats()
+                if challenge_stats['days_remaining'] > 0:
+                    daily_goal = challenge_stats['required_daily_avg']
+                    ax.axhline(y=daily_goal, color='#FF9800', linestyle='--', linewidth=2, 
+                             label=f'Goal: {daily_goal:.0f}m/day')
+                    ax.legend()
+                
+                # Add value labels to bars
+                for i, bar in enumerate(bars):
+                    height = bar.get_height()
+                    if height > 0:  # Only add labels to bars with values
+                        ax.text(bar.get_x() + bar.get_width()/2., height + (max(data['totals']) * 0.02),
+                              f'{int(height):,}m', ha='center', va='bottom', fontsize=8)
+            else:
+                # Use line chart for weekly and monthly
+                line = ax.plot(range(len(x_labels)), 
+                              data['totals'],
+                              marker='o',
+                              color='#4CAF50',
+                              linewidth=2,
+                              markersize=6)
+                
+                # Add value labels
+                for i, value in enumerate(data['totals']):
+                    label_y = value + (max(data['totals']) * 0.02)
+                    ax.text(i, label_y, f'{int(value):,}m',
+                            ha='center', va='bottom')
         
         # Customize graph
         ax.set_xticks(range(len(x_labels)))
-        ax.set_xticklabels(x_labels, rotation=45, ha='right')
+        ax.set_xticklabels(x_labels, rotation=45, ha='right', fontsize=8 if "Daily" in graph_type else 9)
         ax.set_ylabel('Elevation Gain (m)')
         ax.grid(True, linestyle='--', alpha=0.7)
         
